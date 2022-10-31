@@ -19,7 +19,24 @@ class Book
 
   scope :title, -> (title) { where(title: /^#{title}/i) }
   scope :isbn, -> (isbn) { where(isbn: isbn) }
-  scope :author, -> (author) { where(author: author) }
+  scope :author, -> (author) { where(author: /^#{author}/i) }
+end
+
+class BookSerializer
+  def initialize(book)
+    @book = book
+  end
+
+  def as_json(*)
+    data = {
+      id:@book.id.to_s,
+      title:@book.title,
+      author:@book.author,
+      isbn:@book.isbn
+    }
+    data[:errors] = @book.errors if@book.errors.any?
+    data
+  end
 end
 
 get '/' do
@@ -33,11 +50,11 @@ namespace '/api/v1' do
 
   get '/books' do
     books = Book.all
-  
     [:title, :isbn, :author].each do |filter|
       books = books.send(filter, params[filter]) if params[filter]
     end
-  
-    books.to_json
+
+    # We just change this from books.to_json to the following
+    books.map { |book| BookSerializer.new(book) }.to_json
   end
 end
